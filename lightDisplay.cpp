@@ -6,11 +6,28 @@
 #define restoreClk 100e3
 #define TRANSACTION_START wire->setClock(wireClk)    ///< Set before I2C transfer
 #define TRANSACTION_END wire->setClock(restoreClk) ///< Restore after I2C xfer
+/******************************************************************************/
+#define _Swap_uint8(a, b)\
+    {             \
+    uint8_t t = a;\
+    a = b;        \
+    b = t;        \
+    }                       
 
+#define rotateFunc(a , b , ang , cx , cy)\
+{                                        \
+  a = a - cx;                            \
+  b = b - cy;                            \
+  int t = a;                             \
+  a = a*cos(ang) - b*sin(ang);           \
+  b = b*cos(ang) + t*sin(ang);           \
+  a = a + cx;                            \
+  b = b + cy;                            \
+}              
 /******************************************************************************/
 //CONSTRUCTOR
 lightDisplay::lightDisplay(uint8_t w, uint8_t h, TwoWire *twi)
-:  buffer(NULL),wire(twi ? twi : &Wire),width(w),height(h)
+:  buffer(NULL),wire(twi ? twi : &Wire),__width(w),__height(h)
 {
 }
 
@@ -61,7 +78,7 @@ void lightDisplay::sendCommandList(const uint8_t *command, uint8_t n){
 bool lightDisplay::begin(uint8_t vcc,uint8_t address,bool periphBegin){
     uint8_t contrast;
     uint8_t comPins = 18; 
-  if ((!buffer) && !(buffer = (uint8_t *)malloc(width * ((height + 7) / 8))))return false;
+  if ((!buffer) && !(buffer = (uint8_t *)malloc(__width * ((__height + 7) / 8))))return false;
     if(vcc == SSD1306_SWITCHCAPVCC){contrast = 0x7F;}
     if(periphBegin){wire->begin();}
     I2Caddr = address;
@@ -103,13 +120,6 @@ bool lightDisplay::begin(uint8_t vcc,uint8_t address,bool periphBegin){
     return true;
 }
 /******************************************************************************/
-#define _Swap_uint8(a, b)\
-    {             \
-    uint8_t t = a;\
-    a = b;        \
-    b = t;        \
-    }                       
-/******************************************************************************/
 
 #ifdef __AVR__
 // Bitmask tables of 0x80>>X and ~(0x80>>X), because X>>Y is slow on AVR
@@ -124,7 +134,7 @@ const uint8_t PROGMEM clrBit[] = {0xFE, 0xFD, 0xFB, 0xF7,
 void lightDisplay::drawPixel(uint8_t COORDX,uint8_t COORDY,uint8_t COLOR){
     uint8_t *ptr = &buffer[COORDX];
     if((COORDY / 8) != currentPage)return;
-    else if((COORDX >= width)||(COORDY >= height)){
+    else if((COORDX >= __width)||(COORDY >= __height)){
     return;
 }
 if((COORDY / 8) == this->currentPage){
@@ -202,13 +212,13 @@ void lightDisplay::bresenhamLine(uint8_t X0,uint8_t Y0,uint8_t X1,uint8_t Y1,uin
         }
   }
 }
-
 /******************************************************************************/
 void lightDisplay::Vline(uint8_t Y0,uint8_t Y1,uint8_t X,uint8_t COLOR){
     if(Y0 > Y1){_Swap_uint8(Y0,Y1);}
-    for(;Y0 < Y1;Y0++){if(Y0/8 == currentPage)break;}
+    for(;Y0 <= Y1;Y0++){if(Y0/8 == currentPage)break;}
     for(;Y0 <= Y1;Y0++){
         drawPixel(X,Y0,COLOR);
+        if(Y0 > (currentPage + 1)*8)return;
     }
 }
 /******************************************************************************/
@@ -231,7 +241,7 @@ this->currentPage = page;
 }
 /******************************************************************************/
 void lightDisplay::pageDisplay(){
-    uint8_t count = width;
+    uint8_t count = __width;
     uint8_t *ptr = buffer;
     TRANSACTION_START;
     sendCommand(0 & 0b00001111);
@@ -256,7 +266,7 @@ void lightDisplay::pageDisplay(){
 }
 /******************************************************************************/
 void lightDisplay::clearPage(){
-        for(uint8_t j = 0; j < width; j++){
+        for(uint8_t j = 0; j < __width; j++){
             buffer[j] = 0;   
         }
 }
@@ -274,6 +284,141 @@ void lightDisplay::drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,
     uint8_t xmax = X0 + WIDTH;
     for(;X0 < xmax;X0++){
         buffer[X0] |= pgm_read_byte(&BITMAP[X0 + currentPage*128]);
+    }
+}
+/******************************************************************************/
+void lightDisplay::drawRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR){
+Vline(Y0,(Y0 + HEIGHT - 1),X0,COLOR);
+Vline(Y0,(Y0 + HEIGHT - 1),(X0 + WIDTH - 1),COLOR);
+Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
+Hline(X0,(X0 + WIDTH - 1),(Y0 + HEIGHT - 1),COLOR);
+}
+/******************************************************************************/
+void lightDisplay::drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR){
+    uint8_t YMAX = Y0 + HEIGHT;
+    for(;Y0 < YMAX;Y0++){if(Y0/8 == currentPage)break;}
+    if(Y0/8 != currentPage)return;
+    for(;Y0 < YMAX;Y0++){
+        Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
+    }
+}
+/******************************************************************************/
+void lightDisplay::drawCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t COLOR){
+  int16_t d = 3 - 2 * R;
+  int8_t x = 0;
+  int8_t y = R;
+    //TOP of the circle = Y0 - r;
+  drawPixel(X0, Y0 + y, COLOR);
+  drawPixel(X0, Y0 - y, COLOR);
+  drawPixel(X0 + y, Y0, COLOR);
+  drawPixel(X0 - y, Y0, COLOR);
+    if(((Y0 + R) < (currentPage)*8) || ((Y0 - R) > (currentPage + 1)*8))return;
+    Serial.println("run");
+  while (x < y) {
+    if (d >= 0) {
+        y--;
+        d = d + 4 * (x - y) + 10; 
+    }else 
+        d = d + 4 * x + 6; 
+    x++;
+    drawPixel(X0 + x, Y0 + y, COLOR);
+    drawPixel(X0 - x, Y0 + y, COLOR);
+    drawPixel(X0 + x, Y0 - y, COLOR);
+    drawPixel(X0 - x, Y0 - y, COLOR);
+    drawPixel(X0 + y, Y0 + x, COLOR);
+    drawPixel(X0 - y, Y0 + x, COLOR);
+    drawPixel(X0 + y, Y0 - x, COLOR);
+    drawPixel(X0 - y, Y0 - x, COLOR);
+  }
+}
+/******************************************************************************/
+void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,uint8_t COLOR){
+    int16_t d = 3 - 2 * R;
+    int8_t x = 0;
+    int8_t y = R;
+      //TOP of the circle = Y0 - r;
+    if(((Y0 + R) < (currentPage)*8) || ((Y0 - R) > (currentPage + 1)*8))return;
+    Serial.println("run");
+    while (x < y) {
+        if (d >= 0) {
+            y--;
+            d = d + 4 * (x - y) + 10; 
+        }else 
+            d = d + 4 * x + 6; 
+        x++;
+        if(quart == 0){
+            drawPixel(X0 - x, Y0 - y, COLOR);
+            drawPixel(X0 - y, Y0 - x, COLOR);
+        }
+        if(quart == 1){
+            drawPixel(X0 + x, Y0 - y, COLOR);
+            drawPixel(X0 + y, Y0 - x, COLOR);
+        }
+        if(quart == 2){
+            drawPixel(X0 + y, Y0 + x, COLOR);
+            drawPixel(X0 + x, Y0 + y, COLOR);
+        }
+        if(quart == 3){
+            drawPixel(X0 - y, Y0 + x, COLOR);
+            drawPixel(X0 - x, Y0 + y, COLOR);
+        }
+    }
+}
+/******************************************************************************/
+void lightDisplay::drawWeirdFillCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR){
+    for(uint8_t rx = 0; rx <= R; rx++){drawCircle(X0,Y0,rx,COLOR);}
+}
+/******************************************************************************/
+void lightDisplay::drawFillCircle(uint8_t X0,uint8_t Y0,uint8_t R,uint8_t COLOR){
+    drawFillQuartCircle(X0,Y0,R,4,COLOR);
+}
+/******************************************************************************/
+void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t quart,uint8_t COLOR){
+    int16_t d = 3 - 2 * R;
+    int8_t x = 0;
+    int8_t y = R;
+    if(((Y0 + R) < (currentPage)*8) || ((Y0 - R) > (currentPage + 1)*8))return;
+
+    if(quart == 4){Hline(X0 + R,X0 - R,Y0,COLOR);}
+
+    while (x < y) {
+        if (d >= 0) {
+            y--;
+            d = d + 4 * (x - y) + 10; 
+        }else 
+            d = d + 4 * x + 6; 
+        x++;
+        switch (quart)
+        {
+        case 0:
+            Hline(X0 - x,X0 - 1,Y0 - y,COLOR);
+            Hline(X0 - y,X0 - 1,Y0 - x,COLOR);
+            break;
+
+        case 1:
+            Hline(X0 + x,X0 + 1,Y0 - y,COLOR);
+            Hline(X0 + y,X0 + 1,Y0 - x,COLOR);
+            break;
+
+        case 2:
+            Hline(X0 + x,X0 + 1,Y0 + y,COLOR);
+            Hline(X0 + y,X0 + 1,Y0 + x,COLOR);
+            break;
+
+        case 3:
+            Hline(X0 - x,X0 - 1,Y0 + y,COLOR);
+            Hline(X0 - y,X0 - 1,Y0 + x,COLOR);
+            break;
+
+        case 4:
+            Hline(X0 + x,X0 - x,Y0 + y,COLOR);
+            Hline(X0 + x,X0 - x,Y0 - y,COLOR);
+            Hline(X0 + y,X0 - y,Y0 + x,COLOR);
+            Hline(X0 + y,X0 - y,Y0 - x,COLOR);
+            break;
+        default:
+            break;
+        }
     }
 }
 /******************************************************************************/
@@ -303,7 +448,17 @@ void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0
         }
     }
 }
-
+/******************************************************************************/
+void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)()){
+    if(endPage  > (NUMOFPAGES - 1))endPage = (NUMOFPAGES - 1);
+    for(;startPage <= endPage; startPage++){
+        this->pageSelect(startPage);
+        this->clearPage();
+        function();
+        this->pageDisplay();
+        }
+}
+/*******************************************************************************/
 
 
 
