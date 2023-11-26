@@ -1,5 +1,6 @@
 #include "lightDisplay.h"
-#include "Arduino.h"
+#include "stdint.h"
+#include <Arduino.h>
 
 
 #define wireClk 400e3
@@ -422,24 +423,25 @@ void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t q
     }
 }
 /******************************************************************************/
-void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR){
+void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM){
     uint8_t Y = 0;                          // actual Y coordinate on the screen
     uint8_t Yrelative = 0;                  // relative Y coordinate where it is the value of Y coordinate of the buffer 
     uint8_t byte;                           // represents the byte we are currently accessing and checking for each bit
     uint8_t bit;
 
-    for(;Y < (Y0 + HEIGHT);Y++){if ((Y/8) == currentPage)break;}            //always update Y coordinates with ever function call
+    for(;Y < (Y0 + HEIGHT - 1);Y++){if ((Y/8) == currentPage)break;}      //always update Y coordinates with ever function call
     if((Y/8) != currentPage)return;
                                                         //Start iterating Y coordinates and X coordinates and access bit and bytes 
     for(;Y < (currentPage + 1)*8;Y++){
         Yrelative = Y - Y0;
         if(Y < Y0){continue;}                           // Skip checking the buffer if we haven't reached start of bitmap yet
-        else if(Y > (Y0 + HEIGHT)){return;}             // if we have exceeded the max height
+        else if(Y > (Y0 + HEIGHT -1 )){return;}             // if we have exceeded the max height
                                                         //Iterate X for full width with each Y iteration
         for(uint8_t x = 0;x < WIDTH; x++){
                                                         //Choose Byte and Bit accordingly
-            byte = pgm_read_byte(&BITMAP[x + (Yrelative/8)*WIDTH]);
-            bit = pgm_read_byte(&setBit[Yrelative&7]) & (byte);
+            if(PGM){byte = pgm_read_byte(&BITMAP[x + (Yrelative/8)*WIDTH]);}
+            else{byte = BITMAP[x + (Yrelative/8)*WIDTH];}
+            bit =  pgm_read_byte(&setBit[Yrelative&7]) & (byte);
 
             if(COLOR){
                 if(bit)drawPixel( (X0 + x), Y, LIGHTDISPWHITE);}
@@ -457,6 +459,15 @@ void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*
         function();
         this->pageDisplay();
         }
+}
+/*******************************************************************************/
+void lightDisplay::drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR,uint8_t BG){
+    unsigned char bytes[5];
+    for(uint8_t i = 0;i < Font->charWidth();i++){
+        bytes[i] =  pgm_read_byte(&Font->charBitMap()[C*5 + i]);
+        Serial.println(bytes[i]);
+    } 
+    drawBitMap(bytes,x,y,Font->charWidth(),Font->charHeight(),COLOR,0);
 }
 /*******************************************************************************/
 
