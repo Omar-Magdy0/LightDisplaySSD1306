@@ -3,9 +3,18 @@
 
 
 #include <Wire.h>
+#include <Print.h>
 #include "SSD1306.h"
-#include "Fonts/Fonts.h"
-#include "Fonts/basicFont/basicFont.h"
+
+#define BASICFONT
+#ifdef BASICFONT
+#include "Fonts/basicFont.h"
+#else
+#define BASICFONT_WIDTH  0
+#define BASICFONT_HEIGHT  0
+extern unsigned char *basicFontBitmap;
+#endif
+
 
 
 
@@ -23,7 +32,7 @@
 #define LIGHTDISPWHITE 1
 #define NUMOFPAGES 8
 
-class lightDisplay{
+class lightDisplay : public Print{
 private:
 
 
@@ -51,18 +60,34 @@ void drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH
 void drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
 void displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)());
 // DISPLAYING TEXT FUNCTIONS PART
+uint8_t getCursorX();
+uint8_t getCursorY();
+void getTextBounds(char *str,uint8_t X0,uint8_t Y0,uint8_t *X1,uint8_t *Y1,uint8_t *W,uint8_t *H);
+#ifdef EXTERNAL_FONTS
 void setFont(font *f);// Here we select the font object
-void setCursor();
-void setTextColor();
+#endif
+
+void setCursor(uint8_t x,uint8_t y);
+void setTextColor(uint8_t COLOR);
+void setWrap(uint8_t c);
 void drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR,uint8_t BG);
-void writeText(char *text);
+
+  using Print::write;
+virtual size_t write(uint8_t);
+
+
 
 
 protected:
 uint8_t *buffer;
 TwoWire *wire;
+#ifdef EXTERNAL_FONTS
 font *Font = &basicFont;
-size_t fontptr;
+#endif
+uint8_t cursorX = 0;
+uint8_t cursorY = 0;
+uint8_t textWrap = 0;
+uint8_t textColor = LIGHTDISPWHITE;
 uint8_t __width;
 uint8_t __height;
 uint8_t I2Caddr;

@@ -1,6 +1,7 @@
 #include "lightDisplay.h"
-#include "stdint.h"
+#include <stdint.h>
 #include <Arduino.h>
+
 
 
 #define wireClk 400e3
@@ -314,7 +315,7 @@ void lightDisplay::drawCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t COLOR){
   drawPixel(X0 + y, Y0, COLOR);
   drawPixel(X0 - y, Y0, COLOR);
     if(((Y0 + R) < (currentPage)*8) || ((Y0 - R) > (currentPage + 1)*8))return;
-    Serial.println("run");
+
   while (x < y) {
     if (d >= 0) {
         y--;
@@ -339,7 +340,7 @@ void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,
     int8_t y = R;
       //TOP of the circle = Y0 - r;
     if(((Y0 + R) < (currentPage)*8) || ((Y0 - R) > (currentPage + 1)*8))return;
-    Serial.println("run");
+
     while (x < y) {
         if (d >= 0) {
             y--;
@@ -428,10 +429,10 @@ void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0
     uint8_t Yrelative = 0;                  // relative Y coordinate where it is the value of Y coordinate of the buffer 
     uint8_t byte;                           // represents the byte we are currently accessing and checking for each bit
     uint8_t bit;
-
+    if((currentPage + 1)*8 < Y0)return;                                   // check if current page has Y0 in it or not
     for(;Y < (Y0 + HEIGHT - 1);Y++){if ((Y/8) == currentPage)break;}      //always update Y coordinates with ever function call
-    if((Y/8) != currentPage)return;
-                                                        //Start iterating Y coordinates and X coordinates and access bit and bytes 
+    if((Y/8) != currentPage)return;                                        //Seem like current page doesnt include the Ymax
+Serial.println("rr");                                                                           //Start iterating Y coordinates and X coordinates and access bit and bytes 
     for(;Y < (currentPage + 1)*8;Y++){
         Yrelative = Y - Y0;
         if(Y < Y0){continue;}                           // Skip checking the buffer if we haven't reached start of bitmap yet
@@ -443,33 +444,77 @@ void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0
             else{byte = BITMAP[x + (Yrelative/8)*WIDTH];}
             bit =  pgm_read_byte(&setBit[Yrelative&7]) & (byte);
 
-            if(COLOR){
-                if(bit)drawPixel( (X0 + x), Y, LIGHTDISPWHITE);}
-            else{
-                if(!bit)drawPixel( (X0 + x), Y, LIGHTDISPWHITE);}
+            if(bit)drawPixel( (X0 + x), Y, COLOR);
         }
     }
 }
 /******************************************************************************/
 void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)()){
     if(endPage  > (NUMOFPAGES - 1))endPage = (NUMOFPAGES - 1);
-    for(;startPage <= endPage; startPage++){
+    for(;startPage <= endPage; startPage++){    
         this->pageSelect(startPage);
         this->clearPage();
         function();
         this->pageDisplay();
-        }
+    }
 }
 /*******************************************************************************/
 void lightDisplay::drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR,uint8_t BG){
     unsigned char bytes[5];
-    for(uint8_t i = 0;i < Font->charWidth();i++){
-        bytes[i] =  pgm_read_byte(&Font->charBitMap()[C*5 + i]);
-        Serial.println(bytes[i]);
+    for(uint8_t i = 0;i < BASICFONT_WIDTH ; i++){
+        bytes[i] =  pgm_read_byte(&basicFontBitmap[C*BASICFONT_WIDTH + i]);
     } 
-    drawBitMap(bytes,x,y,Font->charWidth(),Font->charHeight(),COLOR,0);
+    drawBitMap(bytes,x,y,BASICFONT_WIDTH,BASICFONT_HEIGHT,COLOR,0);
 }
 /*******************************************************************************/
+#ifdef EXTERNAL_FONTS
+void lightDisplay::setFont(font *f){
+    Font = f;
+}
+#endif
+/*******************************************************************************/
+void lightDisplay::setTextColor(uint8_t COLOR){
+    textColor = COLOR;
+}
+/*******************************************************************************/
+void lightDisplay::setWrap(uint8_t c){
+    textWrap = c;
+}
+/*******************************************************************************/
+void lightDisplay::setCursor(uint8_t x,uint8_t y){
+    cursorX = x;
+    cursorY = y;
+}
+/*******************************************************************************/
+uint8_t lightDisplay::getCursorX(){
+    return cursorX;
+}
+/*******************************************************************************/
+uint8_t lightDisplay::getCursorY(){
+    return cursorY;
+}
+/*******************************************************************************/
+void lightDisplay::getTextBounds(char *str,uint8_t X0,uint8_t Y0,uint8_t *X1,uint8_t *Y1,uint8_t *W,uint8_t *H){
+
+}
+/*******************************************************************************/
+size_t lightDisplay::write(uint8_t c){
+    if(c == '\n'){
+        cursorY += BASICFONT_HEIGHT + 2;
+        cursorX = 0;
+    }
+    else if(c != '\r'){
+        if(textWrap && ((BASICFONT_WIDTH + cursorX) > __width)){
+            cursorX = 0;
+            cursorY += BASICFONT_HEIGHT + 2;
+        }
+    drawChar(cursorX,cursorY - BASICFONT_HEIGHT,c,textColor,3);
+    cursorX += (BASICFONT_WIDTH + 1);
+    }
+    return 1;
+ }
+/*******************************************************************************/
+
 
 
 
