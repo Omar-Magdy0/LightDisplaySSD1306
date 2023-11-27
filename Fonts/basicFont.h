@@ -130,8 +130,4 @@ const unsigned char basicFontBitmap [] PROGMEM = {
 #define BASICFONT_WIDTH 5
 #define BASICFONT_HEIGHT 7
 
-
-
-
-
 #endif

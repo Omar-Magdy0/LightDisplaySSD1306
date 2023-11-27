@@ -24,7 +24,7 @@ extern unsigned char *basicFontBitmap;
 // THEN CHECK FOR THE NEXT ROW AND SEND WHERE ROW IS A PAGE(CHECK DATASHEET) 8BITS HEIGHT AND ROW WIDTH 128BYTE
 // SO THINGS GO AS FOLLOWS YOU HAVE THE FIRST ROW READY THEN SEND THEN CHECK FOR NEXT ROW THEN READY AND SOO ON
 
-
+// LATER ON I AM ADDING FONTS AND ROTATION
 
 
 #define WIRE_MAX 32
@@ -50,19 +50,34 @@ void Hline(uint8_t X0,uint8_t X1,uint8_t Y,uint8_t COLOR);
 void Vline(uint8_t Y0,uint8_t Y1,uint8_t X,uint8_t COLOR);
 void drawLine(uint8_t X0,uint8_t Y0,uint8_t X1,uint8_t Y1,uint8_t COLOR);
 void drawRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
-void drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
+void drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,
+                    uint8_t HEIGHT,uint8_t COLOR);
 void drawCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR);
 void drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,uint8_t COLOR);
 void drawWeirdFillCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR);
-void drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t quart,uint8_t COLOR);
+void drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,
+                          uint8_t quart,uint8_t COLOR);
 void drawFillCircle(uint8_t X0,uint8_t Y0,uint8_t R,uint8_t COLOR);
-void drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM);
-void drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
+void drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,
+                  uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM);
+void drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,
+                  uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
+
 void displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)());
 // DISPLAYING TEXT FUNCTIONS PART
 uint8_t getCursorX();
 uint8_t getCursorY();
-void getTextBounds(char *str,uint8_t X0,uint8_t Y0,uint8_t *X1,uint8_t *Y1,uint8_t *W,uint8_t *H);
+void charBounds(unsigned char c,int16_t *x,int16_t *y,int16_t *minX,
+                  int16_t *minY,int16_t *maxX,int16_t *maxY);
+void getTextBounds(const char *str, int16_t X0, int16_t Y0, int16_t *X1,
+                    int16_t *Y1,uint8_t *W,uint8_t *H);
+void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1,
+                   int16_t *y1, uint8_t *w, uint8_t *h);
+void getTextBounds(const __FlashStringHelper *s, int16_t x, int16_t y,
+                    int16_t *x1, int16_t *y1, uint8_t *w, uint8_t *h);
+
+
+
 #ifdef EXTERNAL_FONTS
 void setFont(font *f);// Here we select the font object
 #endif
@@ -70,13 +85,10 @@ void setFont(font *f);// Here we select the font object
 void setCursor(uint8_t x,uint8_t y);
 void setTextColor(uint8_t COLOR);
 void setWrap(uint8_t c);
-void drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR,uint8_t BG);
+void drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR);
 
   using Print::write;
 virtual size_t write(uint8_t);
-
-
-
 
 protected:
 uint8_t *buffer;

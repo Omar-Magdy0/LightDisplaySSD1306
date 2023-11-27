@@ -274,29 +274,34 @@ void lightDisplay::clearPage(){
 }
 
 /******************************************************************************/
-void lightDisplay::wholeScreenClearDisplay(){
+void lightDisplay::wholeScreenClearDisplay()
+{
     for(uint8_t i = 0; i < NUMOFPAGES; i++){
         pageSelect(i);
         clearPage();
         pageDisplay();
         }
-    }
+}
 /******************************************************************************/
-void lightDisplay::drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR){
+void lightDisplay::drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,
+                                            uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
+{
     uint8_t xmax = X0 + WIDTH;
     for(;X0 < xmax;X0++){
         buffer[X0] |= pgm_read_byte(&BITMAP[X0 + currentPage*128]);
     }
 }
 /******************************************************************************/
-void lightDisplay::drawRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR){
+void lightDisplay::drawRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
+{
 Vline(Y0,(Y0 + HEIGHT - 1),X0,COLOR);
 Vline(Y0,(Y0 + HEIGHT - 1),(X0 + WIDTH - 1),COLOR);
 Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
 Hline(X0,(X0 + WIDTH - 1),(Y0 + HEIGHT - 1),COLOR);
 }
 /******************************************************************************/
-void lightDisplay::drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR){
+void lightDisplay::drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
+{
     uint8_t YMAX = Y0 + HEIGHT;
     for(;Y0 < YMAX;Y0++){if(Y0/8 == currentPage)break;}
     if(Y0/8 != currentPage)return;
@@ -305,7 +310,8 @@ void lightDisplay::drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIG
     }
 }
 /******************************************************************************/
-void lightDisplay::drawCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t COLOR){
+void lightDisplay::drawCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t COLOR)
+{
   int16_t d = 3 - 2 * R;
   int8_t x = 0;
   int8_t y = R;
@@ -334,7 +340,8 @@ void lightDisplay::drawCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t COLOR){
   }
 }
 /******************************************************************************/
-void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,uint8_t COLOR){
+void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,uint8_t COLOR)
+{
     int16_t d = 3 - 2 * R;
     int8_t x = 0;
     int8_t y = R;
@@ -367,15 +374,18 @@ void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,
     }
 }
 /******************************************************************************/
-void lightDisplay::drawWeirdFillCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR){
+void lightDisplay::drawWeirdFillCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR)
+{
     for(uint8_t rx = 0; rx <= R; rx++){drawCircle(X0,Y0,rx,COLOR);}
 }
 /******************************************************************************/
-void lightDisplay::drawFillCircle(uint8_t X0,uint8_t Y0,uint8_t R,uint8_t COLOR){
+void lightDisplay::drawFillCircle(uint8_t X0,uint8_t Y0,uint8_t R,uint8_t COLOR)
+{
     drawFillQuartCircle(X0,Y0,R,4,COLOR);
 }
 /******************************************************************************/
-void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t quart,uint8_t COLOR){
+void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t quart,uint8_t COLOR)
+{
     int16_t d = 3 - 2 * R;
     int8_t x = 0;
     int8_t y = R;
@@ -424,7 +434,9 @@ void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t q
     }
 }
 /******************************************************************************/
-void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM){
+void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,
+                                uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM)
+{
     uint8_t Y = 0;                          // actual Y coordinate on the screen
     uint8_t Yrelative = 0;                  // relative Y coordinate where it is the value of Y coordinate of the buffer 
     uint8_t byte;                           // represents the byte we are currently accessing and checking for each bit
@@ -432,7 +444,7 @@ void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0
     if((currentPage + 1)*8 < Y0)return;                                   // check if current page has Y0 in it or not
     for(;Y < (Y0 + HEIGHT - 1);Y++){if ((Y/8) == currentPage)break;}      //always update Y coordinates with ever function call
     if((Y/8) != currentPage)return;                                        //Seem like current page doesnt include the Ymax
-Serial.println("rr");                                                                           //Start iterating Y coordinates and X coordinates and access bit and bytes 
+                                                                      //Start iterating Y coordinates and X coordinates and access bit and bytes 
     for(;Y < (currentPage + 1)*8;Y++){
         Yrelative = Y - Y0;
         if(Y < Y0){continue;}                           // Skip checking the buffer if we haven't reached start of bitmap yet
@@ -449,7 +461,8 @@ Serial.println("rr");                                                           
     }
 }
 /******************************************************************************/
-void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)()){
+void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)())
+{
     if(endPage  > (NUMOFPAGES - 1))endPage = (NUMOFPAGES - 1);
     for(;startPage <= endPage; startPage++){    
         this->pageSelect(startPage);
@@ -459,7 +472,8 @@ void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*
     }
 }
 /*******************************************************************************/
-void lightDisplay::drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR,uint8_t BG){
+void lightDisplay::drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR)
+{
     unsigned char bytes[5];
     for(uint8_t i = 0;i < BASICFONT_WIDTH ; i++){
         bytes[i] =  pgm_read_byte(&basicFontBitmap[C*BASICFONT_WIDTH + i]);
@@ -473,50 +487,134 @@ void lightDisplay::setFont(font *f){
 }
 #endif
 /*******************************************************************************/
-void lightDisplay::setTextColor(uint8_t COLOR){
+void lightDisplay::setTextColor(uint8_t COLOR)
+{
     textColor = COLOR;
 }
 /*******************************************************************************/
-void lightDisplay::setWrap(uint8_t c){
+void lightDisplay::setWrap(uint8_t c)
+{
     textWrap = c;
 }
 /*******************************************************************************/
-void lightDisplay::setCursor(uint8_t x,uint8_t y){
+void lightDisplay::setCursor(uint8_t x,uint8_t y)
+{
     cursorX = x;
     cursorY = y;
 }
 /*******************************************************************************/
-uint8_t lightDisplay::getCursorX(){
+uint8_t lightDisplay::getCursorX()
+{
     return cursorX;
 }
 /*******************************************************************************/
-uint8_t lightDisplay::getCursorY(){
+uint8_t lightDisplay::getCursorY()
+{
     return cursorY;
 }
 /*******************************************************************************/
-void lightDisplay::getTextBounds(char *str,uint8_t X0,uint8_t Y0,uint8_t *X1,uint8_t *Y1,uint8_t *W,uint8_t *H){
-
+void lightDisplay::charBounds(unsigned char c,int16_t *x,int16_t *y,
+                                int16_t *minX,int16_t *minY,int16_t *maxX,int16_t *maxY)
+{
+    if(c == '\n'){
+        *y += BASICFONT_HEIGHT + 1;
+        *x = 0;
+    }
+    else if(c != '\r'){
+        if(textWrap && ((BASICFONT_WIDTH + *x) > __width)){
+            *x = 0;
+            *y += BASICFONT_HEIGHT + 1;
+        }
+  
+    int16_t x2 = *x + BASICFONT_WIDTH, // TOP - right pixel of char
+            y2 = *y - BASICFONT_HEIGHT;
+    if (x2 > *maxX)
+        *maxX = x2; // Track max x, y
+    if (*y > *maxY)
+        *maxY = *y;
+    if (*x < *minX)
+        *minX = *x; // Track min x, y
+    if (y2 < *minY)
+        *minY = y2;
+    *x += BASICFONT_WIDTH + 1; // Advance x one char
+    }
 }
 /*******************************************************************************/
-size_t lightDisplay::write(uint8_t c){
+void lightDisplay::getTextBounds(const char *str,int16_t X0,int16_t Y0,
+                                    int16_t *X1,int16_t *Y1,uint8_t *W,uint8_t *H)
+{
+  uint8_t c; // Current character
+  int16_t minx = 0x7FFF, miny = 0x7FFF, maxx = -1, maxy = -1; // Bound rect
+  // Bound rect is intentionally initialized inverted, so 1st char sets it
+
+  *X1 = X0; // Initial position is value passed in
+  *Y1 = Y0;
+  *W = *H = 0; // Initial size is zero
+
+  while ((c = *str++)) {
+    // charBounds() modifies x/y to advance for each character,
+    // and min/max x/y are updated to incrementally build bounding rect.
+    charBounds(c, &X0, &Y0, &minx, &miny, &maxx, &maxy);
+  }
+
+  if (maxx >= minx) {     // If legit string bounds were found...
+    *X1 = minx;           // Update x1 to least X coord,
+    *W = maxx - minx; // And w to bound rect width
+  }
+  if (maxy >= miny) { // Same for height
+    *Y1 = miny + 1;
+    *H = maxy - miny;
+  }
+}
+/*******************************************************************************/
+size_t lightDisplay::write(uint8_t c)
+{
     if(c == '\n'){
-        cursorY += BASICFONT_HEIGHT + 2;
+        cursorY += BASICFONT_HEIGHT + 1;
         cursorX = 0;
     }
     else if(c != '\r'){
         if(textWrap && ((BASICFONT_WIDTH + cursorX) > __width)){
             cursorX = 0;
-            cursorY += BASICFONT_HEIGHT + 2;
+            cursorY += BASICFONT_HEIGHT + 1;
         }
-    drawChar(cursorX,cursorY - BASICFONT_HEIGHT,c,textColor,3);
+    drawChar(cursorX,cursorY - BASICFONT_HEIGHT + 1,c,textColor);
     cursorX += (BASICFONT_WIDTH + 1);
     }
     return 1;
  }
 /*******************************************************************************/
+void lightDisplay::getTextBounds(const String &str, int16_t x, int16_t y,
+                                 int16_t *x1, int16_t *y1, uint8_t *w,
+                                 uint8_t *h) {
+  if (str.length() != 0) {
+    getTextBounds(const_cast<char *>(str.c_str()), x, y, x1, y1, w, h);
+  }
+}
+/*******************************************************************************/
+void lightDisplay::getTextBounds(const __FlashStringHelper *str, int16_t x,
+                                 int16_t y, int16_t *x1, int16_t *y1,
+                                 uint8_t *w, uint8_t *h) {
+  uint8_t *s = (uint8_t *)str, c;
 
+  *x1 = x;
+  *y1 = y;
+  *w = *h = 0;
 
+  int16_t minx = __width, miny = __height, maxx = -1, maxy = -1;
 
+  while ((c = pgm_read_byte(s++)))
+    charBounds(c, &x, &y, &minx, &miny, &maxx, &maxy);
 
+  if (maxx >= minx) {
+    *x1 = minx;
+    *w = maxx - minx + 1;
+  }
+  if (maxy >= miny) {
+    *y1 = miny;
+    *h = maxy - miny + 1;
+  }
+}
+/*******************************************************************************/
 
 
