@@ -17,17 +17,17 @@
   b = b + cy;                            \
 }              
 
-FUNKYSquare::FUNKYSquare(uint8_t x,uint8_t y,uint8_t w,uint8_t h,lightDisplay *dr){
+FUNKYSquare::FUNKYSquare(int16_t x,int16_t y,uint8_t w,uint8_t h,lightDisplay *dr){
       X0 = x;Y0 = y;width = w;height = h;dispo = dr;
 }
 
 void FUNKYSquare::DisplayFunction(){
-    int8_t x0 = X0,y0 = Y0,
+    int16_t x0 = X0,y0 = Y0,
     x1 = X0 + width,y1 = Y0,
     x2 = X0 + width,y2 = Y0 + height,
     x3 = X0,y3 = Y0 + height;
-    int8_t midX = X0 + (width/2);
-    int8_t midY = Y0 + (height/2);
+    int16_t midX = X0 + (width/2);
+    int16_t midY = Y0 + (height/2);
     rotateFunc(x0,y0,angle,midX,midY);
     rotateFunc(x1,y1,angle,midX,midY);
     rotateFunc(x2,y2,angle,midX,midY);

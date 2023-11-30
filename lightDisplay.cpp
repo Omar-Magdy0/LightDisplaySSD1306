@@ -9,13 +9,13 @@
 #define TRANSACTION_START wire->setClock(wireClk)    ///< Set before I2C transfer
 #define TRANSACTION_END wire->setClock(restoreClk) ///< Restore after I2C xfer
 /******************************************************************************/
-#define _Swap_uint8(a, b)\
+#define _Swap_int16(a, b)\
     {             \
-    uint8_t t = a;\
+    int16_t t = a;\
     a = b;        \
     b = t;        \
     }                       
-
+/******************************************************************************/
 #define rotateFunc(a , b , ang , cx , cy)\
 {                                        \
   a = a - cx;                            \
@@ -25,7 +25,7 @@
   b = b*cos(ang) + t*sin(ang);           \
   a = a + cx;                            \
   b = b + cy;                            \
-}              
+}                                                      
 /******************************************************************************/
 //CONSTRUCTOR
 lightDisplay::lightDisplay(uint8_t w, uint8_t h, TwoWire *twi)
@@ -133,11 +133,17 @@ const uint8_t PROGMEM clrBit[] = {0xFE, 0xFD, 0xFB, 0xF7,
 
 /******************************************************************************/
 
-void lightDisplay::drawPixel(uint8_t COORDX,uint8_t COORDY,uint8_t COLOR){
+inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR){
     uint8_t *ptr = &buffer[COORDX];
     if((COORDY / 8) != currentPage)return;
-    else if((COORDX >= __width)||(COORDY >= __height)){
-    return;
+    else if((COORDX >= __width)||(COORDY >= __height))return;
+
+if(bufferOptimization){
+if(COORDX < minX)minX = COORDX;
+if(COORDX > maxX)maxX = COORDX;
+if(COORDY/8 < minPage_toEdit)minPage_toEdit = COORDY/8;
+if(COORDY/8 > maxPage_toEdit)maxPage_toEdit = COORDY/8;
+return;
 }
 if((COORDY / 8) == this->currentPage){
 #ifdef __AVR__
@@ -165,21 +171,21 @@ if((COORDY / 8) == this->currentPage){
     @param ENDY   Y coordinate for the last point on line
     @param COLOR  Color of the drawn line WHITE/BLACK supported
 */
-void lightDisplay::bresenhamLine(uint8_t X0,uint8_t Y0,uint8_t X1,uint8_t Y1,uint8_t COLOR){
+void lightDisplay::bresenhamLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uint8_t COLOR){
     uint8_t steep = abs((Y1 - Y0)/(X1 - X0));
     if(steep){
-        _Swap_uint8(X0,Y0);
-        _Swap_uint8(X1,Y1);
+        _Swap_int16(X0,Y0);
+        _Swap_int16(X1,Y1);
     }
 
     if(X0 > X1){
-        _Swap_uint8(X0,X1);
-        _Swap_uint8(Y0,Y1);  
+        _Swap_int16(X0,X1);
+        _Swap_int16(Y0,Y1);  
     }
     
-    uint8_t dy = abs(Y1 - Y0);
-    uint8_t dx = X1 - X0;
-    int8_t err = dx/2;
+    int16_t dy = abs(Y1 - Y0);
+    int16_t dx = X1 - X0;
+    int16_t err = dx/2;
     int8_t ystep;
 
     if (Y0 < Y1) {
@@ -215,8 +221,8 @@ void lightDisplay::bresenhamLine(uint8_t X0,uint8_t Y0,uint8_t X1,uint8_t Y1,uin
   }
 }
 /******************************************************************************/
-void lightDisplay::Vline(uint8_t Y0,uint8_t Y1,uint8_t X,uint8_t COLOR){
-    if(Y0 > Y1){_Swap_uint8(Y0,Y1);}
+void lightDisplay::Vline(int16_t Y0,int16_t Y1,int16_t X,uint8_t COLOR){
+    if(Y0 > Y1){_Swap_int16(Y0,Y1);}
     for(;Y0 <= Y1;Y0++){if(Y0/8 == currentPage)break;}
     for(;Y0 <= Y1;Y0++){
         drawPixel(X,Y0,COLOR);
@@ -224,21 +230,23 @@ void lightDisplay::Vline(uint8_t Y0,uint8_t Y1,uint8_t X,uint8_t COLOR){
     }
 }
 /******************************************************************************/
-void lightDisplay::Hline(uint8_t X0,uint8_t X1,uint8_t Y,uint8_t COLOR){
-    if(X0 > X1){_Swap_uint8(X0,X1);}
+void lightDisplay::Hline(int16_t X0,int16_t X1,int16_t Y,uint8_t COLOR){
+    if(X0 > X1){_Swap_int16(X0,X1);}
     if(Y/8 != currentPage)return;
     for(;X0 <= X1;X0++){
         drawPixel(X0,Y,COLOR);
     }
 }
 /******************************************************************************/
-void lightDisplay::drawLine(uint8_t X0,uint8_t Y0,uint8_t X1,uint8_t Y1,uint8_t COLOR){
+void lightDisplay::drawLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uint8_t COLOR){
     if(X0 == X1)Vline(Y0,Y1,X0,COLOR);
     else if(Y0 == Y1)Hline(X0,X1,Y0,COLOR);
     else bresenhamLine(X0,Y0,X1,Y1,COLOR);
 }
 /******************************************************************************/
 void lightDisplay::pageSelect(uint8_t page){
+if(page < 0)return;
+else if(page > (NUMOFPAGES - 1))return;
 this->currentPage = page;
 }
 /******************************************************************************/
@@ -292,7 +300,7 @@ void lightDisplay::drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,
     }
 }
 /******************************************************************************/
-void lightDisplay::drawRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
+void lightDisplay::drawRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
 {
 Vline(Y0,(Y0 + HEIGHT - 1),X0,COLOR);
 Vline(Y0,(Y0 + HEIGHT - 1),(X0 + WIDTH - 1),COLOR);
@@ -300,7 +308,7 @@ Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
 Hline(X0,(X0 + WIDTH - 1),(Y0 + HEIGHT - 1),COLOR);
 }
 /******************************************************************************/
-void lightDisplay::drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
+void lightDisplay::drawFillRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
 {
     uint8_t YMAX = Y0 + HEIGHT;
     for(;Y0 < YMAX;Y0++){if(Y0/8 == currentPage)break;}
@@ -374,17 +382,17 @@ void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,
     }
 }
 /******************************************************************************/
-void lightDisplay::drawWeirdFillCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR)
+void lightDisplay::drawWeirdFillCircle(int16_t X0,int16_t Y0,uint8_t R, uint8_t COLOR)
 {
     for(uint8_t rx = 0; rx <= R; rx++){drawCircle(X0,Y0,rx,COLOR);}
 }
 /******************************************************************************/
-void lightDisplay::drawFillCircle(uint8_t X0,uint8_t Y0,uint8_t R,uint8_t COLOR)
+void lightDisplay::drawFillCircle(int16_t X0,int16_t Y0,uint8_t R,uint8_t COLOR)
 {
     drawFillQuartCircle(X0,Y0,R,4,COLOR);
 }
 /******************************************************************************/
-void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t quart,uint8_t COLOR)
+void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,uint8_t R,uint8_t quart,uint8_t COLOR)
 {
     int16_t d = 3 - 2 * R;
     int8_t x = 0;
@@ -434,7 +442,7 @@ void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t q
     }
 }
 /******************************************************************************/
-void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,
+void lightDisplay::drawBitMap(const unsigned char BITMAP[],int16_t X0,int16_t Y0,
                                 uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM)
 {
     uint8_t Y = 0;                          // actual Y coordinate on the screen
@@ -463,7 +471,6 @@ void lightDisplay::drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0
 /******************************************************************************/
 void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)())
 {
-    if(endPage  > (NUMOFPAGES - 1))endPage = (NUMOFPAGES - 1);
     for(;startPage <= endPage; startPage++){    
         this->pageSelect(startPage);
         this->clearPage();
@@ -471,8 +478,58 @@ void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*
         this->pageDisplay();
     }
 }
+/******************************************************************************/
+void lightDisplay::displayFunctionGroupOpt(void(*function)())
+{
+    bufferOptimization = true;
+    if(bufferOptimization){
+        for(int i = 0;i < NUMOFPAGES;i++){  
+            this->pageSelect(i); 
+            function();
+        }
+    }
+    bufferOptimization = false;
+    drawAtomicArea(minX,(maxX - minX + 1),minPage_toEdit,maxPage_toEdit,function);
+
+    minX = 255;
+    maxX = 0;
+    minPage_toEdit = 255;
+    maxPage_toEdit = 0;
+}
 /*******************************************************************************/
-void lightDisplay::drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR)
+void lightDisplay::atomicDisplay(int8_t x,uint8_t WIDTH){
+    sendCommand(x & 0b00001111);                        //SET higher and lower nibble of the column address
+    sendCommand( ((x >> 4) & 0b00001111) | (0x10) );
+    sendCommand(0xB0 | currentPage);
+    uint8_t count = WIDTH;
+    uint8_t *ptr = &buffer[x];
+    wire->beginTransmission(I2Caddr);
+    wire->write((uint8_t)0x40); // Co = 0, D/C = 1
+    uint16_t bytesOut = 1;
+    while (count--) {
+        if (bytesOut >= WIRE_MAX) {
+            wire->endTransmission();
+            wire->beginTransmission(I2Caddr);
+            wire->write((uint8_t)0x40); // Co = 0, D/C = 1
+            bytesOut = 1;
+        }
+        wire->write(*ptr++);
+        bytesOut++;
+    }
+    wire->endTransmission();
+}
+/*******************************************************************************/
+void lightDisplay::drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint8_t endPage,void (*function)())
+{
+    for(;startPage <= endPage; startPage++){    
+        this->pageSelect(startPage);
+        this->clearPage();
+        function();
+        this->atomicDisplay(x,WIDTH);
+    }   
+}
+/*******************************************************************************/
+void lightDisplay::drawChar(int16_t x,int16_t y,unsigned char C,uint8_t COLOR)
 {
     unsigned char bytes[5];
     for(uint8_t i = 0;i < BASICFONT_WIDTH ; i++){
@@ -608,11 +665,11 @@ void lightDisplay::getTextBounds(const __FlashStringHelper *str, int16_t x,
 
   if (maxx >= minx) {
     *x1 = minx;
-    *w = maxx - minx + 1;
+    *w = maxx - minx;
   }
   if (maxy >= miny) {
-    *y1 = miny;
-    *h = maxy - miny + 1;
+    *y1 = miny + 1;
+    *h = maxy - miny;
   }
 }
 /*******************************************************************************/

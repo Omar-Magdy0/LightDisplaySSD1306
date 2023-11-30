@@ -44,26 +44,29 @@ void pageSelect(uint8_t page);
 void pageDisplay();
 void clearPage();
 void wholeScreenClearDisplay();
-void drawPixel(uint8_t COORDX,uint8_t COORDY,uint8_t COLOR);
-void bresenhamLine(uint8_t X0,uint8_t Y0,uint8_t X1,uint8_t Y1,uint8_t COLOR);
-void Hline(uint8_t X0,uint8_t X1,uint8_t Y,uint8_t COLOR);
-void Vline(uint8_t Y0,uint8_t Y1,uint8_t X,uint8_t COLOR);
-void drawLine(uint8_t X0,uint8_t Y0,uint8_t X1,uint8_t Y1,uint8_t COLOR);
-void drawRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
-void drawFillRect(uint8_t X0,uint8_t Y0,uint8_t WIDTH,
+void drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR);
+void bresenhamLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uint8_t COLOR);
+void Hline(int16_t X0,int16_t X1,int16_t Y,uint8_t COLOR);
+void Vline(int16_t Y0,int16_t Y1,int16_t X,uint8_t COLOR);
+void drawLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uint8_t COLOR);
+void drawRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
+void drawFillRect(int16_t X0,int16_t Y0,uint8_t WIDTH,
                     uint8_t HEIGHT,uint8_t COLOR);
 void drawCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR);
 void drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,uint8_t COLOR);
-void drawWeirdFillCircle(int16_t X0,int16_t Y0,int16_t R, uint8_t COLOR);
-void drawFillQuartCircle(int16_t X0,int16_t Y0,int16_t R,
+void drawWeirdFillCircle(int16_t X0,int16_t Y0,uint8_t R, uint8_t COLOR);
+void drawFillQuartCircle(int16_t X0,int16_t Y0,uint8_t R,
                           uint8_t quart,uint8_t COLOR);
-void drawFillCircle(uint8_t X0,uint8_t Y0,uint8_t R,uint8_t COLOR);
-void drawBitMap(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,
+void drawFillCircle(int16_t X0,int16_t Y0,uint8_t R,uint8_t COLOR);
+void drawBitMap(const unsigned char BITMAP[],int16_t X0,int16_t Y0,
                   uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM);
 void drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,uint8_t Y0,
                   uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR);
 
 void displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)());
+void displayFunctionGroupOpt(void(*function)());
+void atomicDisplay(int8_t x,uint8_t WIDTH);
+void drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint8_t endPage,void (*function)());
 // DISPLAYING TEXT FUNCTIONS PART
 uint8_t getCursorX();
 uint8_t getCursorY();
@@ -85,7 +88,7 @@ void setFont(font *f);// Here we select the font object
 void setCursor(uint8_t x,uint8_t y);
 void setTextColor(uint8_t COLOR);
 void setWrap(uint8_t c);
-void drawChar(uint8_t x,uint8_t y,unsigned char C,uint8_t COLOR);
+void drawChar(int16_t x,int16_t y,unsigned char C,uint8_t COLOR);
 
   using Print::write;
 virtual size_t write(uint8_t);
@@ -98,12 +101,17 @@ font *Font = &basicFont;
 #endif
 uint8_t cursorX = 0;
 uint8_t cursorY = 0;
+uint8_t minX = 255;
+uint8_t maxX = 0;
+uint8_t minPage_toEdit = 255;
+uint8_t maxPage_toEdit = 0;
 uint8_t textWrap = 0;
 uint8_t textColor = LIGHTDISPWHITE;
+bool bufferOptimization = false;
 uint8_t __width;
 uint8_t __height;
 uint8_t I2Caddr;
-uint8_t currentPage;
+int8_t currentPage;
 void sendCommand(uint8_t command);
 void sendCommandList(const uint8_t *command, uint8_t n);
 };
