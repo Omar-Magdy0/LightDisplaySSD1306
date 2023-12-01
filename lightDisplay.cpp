@@ -7,7 +7,7 @@
 #define wireClk 400e3
 #define restoreClk 100e3
 #define TRANSACTION_START wire->setClock(wireClk)    ///< Set before I2C transfer
-#define TRANSACTION_END wire->setClock(restoreClk) ///< Restore after I2C xfer
+#define TRANSACTION_END wire->setClock(restoreClk) ///< Restore after I2C transfer
 /******************************************************************************/
 #define _Swap_int16(a, b)\
     {             \
@@ -134,6 +134,7 @@ const uint8_t PROGMEM clrBit[] = {0xFE, 0xFD, 0xFB, 0xF7,
 /******************************************************************************/
 
 inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR){
+
     uint8_t *ptr = &buffer[COORDX];
     if((COORDY / 8) != currentPage)return;
     else if((COORDX >= __width)||(COORDY >= __height))return;
@@ -442,14 +443,15 @@ void lightDisplay::drawFillQuartCircle(int16_t X0,int16_t Y0,uint8_t R,uint8_t q
     }
 }
 /******************************************************************************/
-void lightDisplay::drawBitMap(const unsigned char BITMAP[],int16_t X0,int16_t Y0,
+void lightDisplay::drawBitMap_V(const unsigned char BITMAP[],int16_t X0,int16_t Y0,
                                 uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM)
 {
     uint8_t Y = 0;                          // actual Y coordinate on the screen
     uint8_t Yrelative = 0;                  // relative Y coordinate where it is the value of Y coordinate of the buffer 
     uint8_t byte;                           // represents the byte we are currently accessing and checking for each bit
     uint8_t bit;
-    if((currentPage + 1)*8 < Y0)return;                                   // check if current page has Y0 in it or not
+    
+    if(Y0/8 > currentPage)return;                                           // check if current page has Y0 in it or not
     for(;Y < (Y0 + HEIGHT - 1);Y++){if ((Y/8) == currentPage)break;}      //always update Y coordinates with ever function call
     if((Y/8) != currentPage)return;                                        //Seem like current page doesnt include the Ymax
                                                                       //Start iterating Y coordinates and X coordinates and access bit and bytes 
@@ -459,15 +461,81 @@ void lightDisplay::drawBitMap(const unsigned char BITMAP[],int16_t X0,int16_t Y0
         else if(Y > (Y0 + HEIGHT -1 )){return;}             // if we have exceeded the max height
                                                         //Iterate X for full width with each Y iteration
         for(uint8_t x = 0;x < WIDTH; x++){
-                                                        //Choose Byte and Bit accordingly
-            if(PGM){byte = pgm_read_byte(&BITMAP[x + (Yrelative/8)*WIDTH]);}
-            else{byte = BITMAP[x + (Yrelative/8)*WIDTH];}
+                            //Choose Byte and Bit accordingly
+            if(PGM)
+                byte = pgm_read_byte(&BITMAP[x + (Yrelative/8)*WIDTH]);
+            else
+                byte = BITMAP[x + (Yrelative/8)*WIDTH];
+
             bit =  pgm_read_byte(&setBit[Yrelative&7]) & (byte);
 
             if(bit)drawPixel( (X0 + x), Y, COLOR);
         }
     }
 }
+
+/******************************************************************************/
+
+
+/* ROTATED BITMAP DRAWING SHOULD GO HERE  SAME LOGIC HOWEVER WRITING TO BUFFER DIFFERS
+    SINCE ALSO THE X COORDINATE 
+*/
+// VALUABLE SOLUTION FOR HAVING SCREEN ROTATION FEATURE HERE 
+/*
+    SINCE ALREADY MOST FUNCTIONS SUPPORT ROTATION BY THEMSELVES 
+    LINES / (filled/notfilled)RECTANCLES / (filled/notfilled)quarter circles
+    and ONLY BITMAPS ARE THE ONE constraint for rotation
+    I can Have two functions for drawing bitmaps 
+    one that draws vertical bitmaps and one for horizontal bitmaps
+    where each are encoded vertically (1-bit - 1-pixel)
+*/
+
+#ifdef HORIZONTALBITMAPS
+void lightDisplay::drawBitMap_H(const unsigned char BITMAP[],int16_t X0,int16_t Y0,
+                                uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM)
+{                                           // X coords of the Bitmap 
+    uint8_t byte;                           // represents the byte we are currently accessing and checking for each bit
+    uint8_t bit;
+    uint8_t x = WIDTH - 1;
+    uint8_t ymax = Y0 + WIDTH - 1;
+
+
+    if(Y0/8 > currentPage)return;
+    for(;x > 0;x--,Y0++){if(Y0/8 == currentPage)break;}
+    if((Y0/8) != currentPage)return; 
+
+    for(;x > 0;Y0++,x--){  
+        if(Y0 > ymax + 1)return;
+        if(Y0/8 > currentPage)return;
+        for(int i = 0; i < HEIGHT; i++){
+            if(PGM)
+                byte = pgm_read_byte(&BITMAP[x + (i/8)*WIDTH]);
+            else 
+                byte = BITMAP[x + (i/8)*WIDTH];
+
+            bit =  pgm_read_byte(&setBit[i&7]) & (byte);
+            if(bit)drawPixel( X0 + i, Y0, COLOR);
+        }                              
+    }
+}
+#endif
+/******************************************************************************/
+void lightDisplay::drawBitMap(const unsigned char BITMAP[],int16_t X0,int16_t Y0,
+                                uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR,bool PGM)
+{   
+    #ifdef HORIZONTALBITMAPS
+    if(bitMapRotation == 0){
+    drawBitMap_V(BITMAP,X0,Y0,WIDTH,HEIGHT,COLOR,PGM);
+    }
+    else{
+    drawBitMap_H(BITMAP,X0,Y0,WIDTH,HEIGHT,COLOR,PGM);
+    }
+    #else
+    drawBitMap_V(BITMAP,X0,Y0,WIDTH,HEIGHT,COLOR,PGM);
+    #endif
+}
+
+
 /******************************************************************************/
 void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)())
 {
@@ -498,6 +566,7 @@ void lightDisplay::displayFunctionGroupOpt(void(*function)())
 }
 /*******************************************************************************/
 void lightDisplay::atomicDisplay(int8_t x,uint8_t WIDTH){
+    TRANSACTION_START;
     sendCommand(x & 0b00001111);                        //SET higher and lower nibble of the column address
     sendCommand( ((x >> 4) & 0b00001111) | (0x10) );
     sendCommand(0xB0 | currentPage);
@@ -517,6 +586,7 @@ void lightDisplay::atomicDisplay(int8_t x,uint8_t WIDTH){
         bytesOut++;
     }
     wire->endTransmission();
+    TRANSACTION_END;
 }
 /*******************************************************************************/
 void lightDisplay::drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint8_t endPage,void (*function)())
