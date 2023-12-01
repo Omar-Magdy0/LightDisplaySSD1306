@@ -139,26 +139,26 @@ inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR)
     if((COORDY / 8) != currentPage)return;
     else if((COORDX >= __width)||(COORDY >= __height))return;
 
-if(bufferOptimization){
-if(COORDX < minX)minX = COORDX;
-if(COORDX > maxX)maxX = COORDX;
-if(COORDY/8 < minPage_toEdit)minPage_toEdit = COORDY/8;
-if(COORDY/8 > maxPage_toEdit)maxPage_toEdit = COORDY/8;
-return;
-}
-if((COORDY / 8) == this->currentPage){
-#ifdef __AVR__
-    if (COLOR){
-        *ptr |= pgm_read_byte(&setBit[COORDY & 7]);}
+    if(bufferOptimization){
+        if(COORDX < minX)minX = COORDX;
+        if(COORDX > maxX)maxX = COORDX;
+        if(COORDY/8 < minPage_toEdit)minPage_toEdit = COORDY/8;
+        if(COORDY/8 > maxPage_toEdit)maxPage_toEdit = COORDY/8;
+        return;
+    }
+    if((COORDY / 8) == this->currentPage){
+    #ifdef __AVR__
+        if (COLOR){
+            *ptr |= pgm_read_byte(&setBit[COORDY & 7]);}
     else
-      *ptr &= pgm_read_byte(&clrBit[COORDY & 7]);
-#else
+        *ptr &= pgm_read_byte(&clrBit[COORDY & 7]);
+    #else
     if (COLOR)
       *ptr |= 1 << (COORDY & 7);
     else
       *ptr &= ~(1 << (COORDY & 7));
-#endif
-}
+    #endif
+    }
 }
 
 /******************************************************************************/
@@ -303,10 +303,10 @@ void lightDisplay::drawBitMapFullScreen(const unsigned char BITMAP[],uint8_t X0,
 /******************************************************************************/
 void lightDisplay::drawRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
 {
-Vline(Y0,(Y0 + HEIGHT - 1),X0,COLOR);
-Vline(Y0,(Y0 + HEIGHT - 1),(X0 + WIDTH - 1),COLOR);
-Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
-Hline(X0,(X0 + WIDTH - 1),(Y0 + HEIGHT - 1),COLOR);
+    Vline(Y0,(Y0 + HEIGHT - 1),X0,COLOR);
+    Vline(Y0,(Y0 + HEIGHT - 1),(X0 + WIDTH - 1),COLOR);
+    Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
+    Hline(X0,(X0 + WIDTH - 1),(Y0 + HEIGHT - 1),COLOR);
 }
 /******************************************************************************/
 void lightDisplay::drawFillRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
@@ -321,32 +321,32 @@ void lightDisplay::drawFillRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIG
 /******************************************************************************/
 void lightDisplay::drawCircle(int16_t X0,int16_t Y0,int16_t R,uint8_t COLOR)
 {
-  int16_t d = 3 - 2 * R;
-  int8_t x = 0;
-  int8_t y = R;
+    int16_t d = 3 - 2 * R;
+    int8_t x = 0;
+    int8_t y = R;
     //TOP of the circle = Y0 - r;
-  drawPixel(X0, Y0 + y, COLOR);
-  drawPixel(X0, Y0 - y, COLOR);
-  drawPixel(X0 + y, Y0, COLOR);
-  drawPixel(X0 - y, Y0, COLOR);
+    drawPixel(X0, Y0 + y, COLOR);
+    drawPixel(X0, Y0 - y, COLOR);
+    drawPixel(X0 + y, Y0, COLOR);
+    drawPixel(X0 - y, Y0, COLOR);
     if(((Y0 + R) < (currentPage)*8) || ((Y0 - R) > (currentPage + 1)*8))return;
 
-  while (x < y) {
-    if (d >= 0) {
-        y--;
-        d = d + 4 * (x - y) + 10; 
-    }else 
-        d = d + 4 * x + 6; 
-    x++;
-    drawPixel(X0 + x, Y0 + y, COLOR);
-    drawPixel(X0 - x, Y0 + y, COLOR);
-    drawPixel(X0 + x, Y0 - y, COLOR);
-    drawPixel(X0 - x, Y0 - y, COLOR);
-    drawPixel(X0 + y, Y0 + x, COLOR);
-    drawPixel(X0 - y, Y0 + x, COLOR);
-    drawPixel(X0 + y, Y0 - x, COLOR);
-    drawPixel(X0 - y, Y0 - x, COLOR);
-  }
+    while (x < y) {
+        if (d >= 0) {
+            y--;
+            d = d + 4 * (x - y) + 10; 
+        }else 
+            d = d + 4 * x + 6; 
+        x++;
+        drawPixel(X0 + x, Y0 + y, COLOR);
+        drawPixel(X0 - x, Y0 + y, COLOR);
+        drawPixel(X0 + x, Y0 - y, COLOR);
+        drawPixel(X0 - x, Y0 - y, COLOR);
+        drawPixel(X0 + y, Y0 + x, COLOR);
+        drawPixel(X0 - y, Y0 + x, COLOR);
+        drawPixel(X0 + y, Y0 - x, COLOR);
+        drawPixel(X0 - y, Y0 - x, COLOR);
+    }
 }
 /******************************************************************************/
 void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,uint8_t COLOR)
@@ -450,7 +450,6 @@ void lightDisplay::drawBitMap_V(const unsigned char BITMAP[],int16_t X0,int16_t 
     uint8_t Yrelative = 0;                  // relative Y coordinate where it is the value of Y coordinate of the buffer 
     uint8_t byte;                           // represents the byte we are currently accessing and checking for each bit
     uint8_t bit;
-    
     if(Y0/8 > currentPage)return;                                           // check if current page has Y0 in it or not
     for(;Y < (Y0 + HEIGHT - 1);Y++){if ((Y/8) == currentPage)break;}      //always update Y coordinates with ever function call
     if((Y/8) != currentPage)return;                                        //Seem like current page doesnt include the Ymax
