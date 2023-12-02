@@ -52,7 +52,7 @@ void pageSelect(uint8_t page);
 void pageDisplay();
 void clearPage();
 void wholeScreenClearDisplay();
-void setScreenRotation();
+void setScreenRotation(uint8_t r = 0);
 /******************************************************************************/
 // CORE trig and shape drawing functions
 /******************************************************************************/
@@ -128,6 +128,7 @@ TwoWire *wire;
 #ifdef EXTERNAL_FONTS
 font *Font = &basicFont;
 #endif
+uint8_t rotation = 0;
 uint8_t cursorX = 0;
 uint8_t cursorY = 0;
 uint8_t minX = 255;
@@ -140,8 +141,10 @@ uint8_t bitMapRotation = 1;
 #endif
 uint8_t textColor = LIGHTDISPWHITE;
 bool bufferOptimization = false;
-uint8_t __width;
-uint8_t __height;
+uint8_t __width__; // THE ACTUAL WIDTH OF THE DISPLAY MODULE (THE BIGGER SIDE)
+uint8_t __height__; // THE ACTUAL HEIGHT OF THE DISPLAY MODULE (THE SMALLER SIDE)
+uint8_t width = __width__; // width after Rotation
+uint8_t height = __height__; // height after ROTATIOn
 uint8_t I2Caddr;
 int8_t currentPage;
 void sendCommand(uint8_t command);

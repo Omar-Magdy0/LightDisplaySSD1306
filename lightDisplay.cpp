@@ -29,7 +29,7 @@
 /******************************************************************************/
 //CONSTRUCTOR
 lightDisplay::lightDisplay(uint8_t w, uint8_t h, TwoWire *twi)
-:  buffer(NULL),wire(twi ? twi : &Wire),__width(w),__height(h)
+:  buffer(NULL),wire(twi ? twi : &Wire),__width__(w),__height__(h)
 {
 }
 
@@ -80,7 +80,7 @@ void lightDisplay::sendCommandList(const uint8_t *command, uint8_t n){
 bool lightDisplay::begin(uint8_t vcc,uint8_t address,bool periphBegin){
     uint8_t contrast;
     uint8_t comPins = 18; 
-  if ((!buffer) && !(buffer = (uint8_t *)malloc(__width * ((__height + 7) / 8))))return false;
+  if ((!buffer) && !(buffer = (uint8_t *)malloc(__width__ * ((__height__ + 7) / 8))))return false;
     if(vcc == SSD1306_SWITCHCAPVCC){contrast = 0x7F;}
     if(periphBegin){wire->begin();}
     I2Caddr = address;
@@ -122,9 +122,51 @@ bool lightDisplay::begin(uint8_t vcc,uint8_t address,bool periphBegin){
     return true;
 }
 /******************************************************************************/
-void lightDisplay::setScreenRotation(){
-    sendCommand(0xC0);
-    sendCommand(0xA0);
+void lightDisplay::setScreenRotation(uint8_t r){
+    static const uint8_t PROGMEM RC0 [] = {
+                                            SSD1306_MEMORYMODE,
+                                            0x02,
+                                            0xC8,  // COM SCAN Direction command (check datasheet)
+                                            };
+    static const uint8_t PROGMEM RC1 [] = {
+                                            SSD1306_MEMORYMODE,
+                                            0x01,
+                                            0xC0,  // COM SCAN Direction command (check datasheet)
+                                            };
+    static const uint8_t PROGMEM RC2 [] = {
+                                            SSD1306_MEMORYMODE,
+                                            0x01,
+                                            0xC0,  // COM SCAN Direction command (check datasheet)
+                                            };
+    static const uint8_t PROGMEM RC3 [] = {
+                                            SSD1306_MEMORYMODE,
+                                            0x01,
+                                            0xC0,  // COM SCAN Direction command (check datasheet)
+                                            };        
+    switch (r)
+    {
+    case 0 : // THE DEFAULT ROTATION HORIZONTAL
+        sendCommandList(RC0,sizeof(RC0));
+        rotation = 0;
+        width = __width__;
+        height = __height__;
+        break;
+    case 1 :  //90 degree Rotation Vertical
+        sendCommandList(RC1,sizeof(RC1));
+        rotation = 1;
+        width = __height__;
+        height = __width__;
+        break;
+    case 2 : // 180degree ROTATION (HORIZONTAL)
+        sendCommand(0xC0); // COM SCAN Direction command (check datasheet)
+        sendCommand(0xA0); // Segment Remap command Check datasheet
+        break;
+    case 3 :  //270 degree rotation Vertical
+        break;
+    
+    default:
+        break;
+    }
 };
 /******************************************************************************/
 #ifdef __AVR__
@@ -138,10 +180,8 @@ const uint8_t PROGMEM clrBit[] = {0xFE, 0xFD, 0xFB, 0xF7,
 /******************************************************************************/
 
 inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR){
-
-    uint8_t *ptr = &buffer[COORDX];
     if((COORDY / 8) != currentPage)return;
-    else if((COORDX >= __width)||(COORDY >= __height))return;
+    else if((COORDX >= width)||(COORDY >= height))return;
 
     if(bufferOptimization){
         if(COORDX < minX)minX = COORDX;
@@ -150,18 +190,40 @@ inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR)
         if(COORDY/8 > maxPage_toEdit)maxPage_toEdit = COORDY/8;
         return;
     }
+
+
     if((COORDY / 8) == this->currentPage){
-    #ifdef __AVR__
-        if (COLOR){
-            *ptr |= pgm_read_byte(&setBit[COORDY & 7]);}
-    else
-        *ptr &= pgm_read_byte(&clrBit[COORDY & 7]);
-    #else
-    if (COLOR)
-      *ptr |= 1 << (COORDY & 7);
-    else
-      *ptr &= ~(1 << (COORDY & 7));
-    #endif
+        if((rotation % 2) == 0){  // ROTATION MODE 0 and 2
+            uint8_t *ptr = &buffer[COORDX];
+#ifdef __AVR__
+            if (COLOR){
+                *ptr |= pgm_read_byte(&setBit[COORDY & 7]);}
+            else
+                *ptr &= pgm_read_byte(&clrBit[COORDY & 7]);
+        
+#else
+            if (COLOR)
+                *ptr |= 1 << (COORDY & 7);
+            else
+                *ptr &= ~(1 << (COORDY & 7));
+#endif
+        }
+
+        if((rotation % 2) == 1){   // ROTATION MODE 1 and 3
+            uint8_t *ptr = &buffer[(COORDX/8) + (COORDY*(width/8))];
+#ifdef __AVR__
+            if (COLOR){
+                *ptr |= pgm_read_byte(&setBit[COORDX & 7]);}
+            else
+                *ptr &= pgm_read_byte(&clrBit[COORDX & 7]);
+        
+#else
+            if (COLOR)
+                *ptr |= 1 << (COORDY & 7);
+            else
+                *ptr &= ~(1 << (COORDY & 7));
+#endif
+        }
     }
 }
 
@@ -256,7 +318,7 @@ this->currentPage = page;
 }
 /******************************************************************************/
 void lightDisplay::pageDisplay(){
-    uint8_t count = __width;
+    uint8_t count = __width__;
     uint8_t *ptr = buffer;
     TRANSACTION_START;
     sendCommand(0 & 0b00001111);
@@ -281,7 +343,7 @@ void lightDisplay::pageDisplay(){
 }
 /******************************************************************************/
 void lightDisplay::clearPage(){
-        for(uint8_t j = 0; j < __width; j++){
+        for(uint8_t j = 0; j < __width__; j++){
             buffer[j] = 0;   
         }
 }
@@ -657,7 +719,7 @@ void lightDisplay::charBounds(unsigned char c,int16_t *x,int16_t *y,
         *x = 0;
     }
     else if(c != '\r'){
-        if(textWrap && ((BASICFONT_WIDTH + *x) > __width)){
+        if(textWrap && ((BASICFONT_WIDTH + *x) > width)){
             *x = 0;
             *y += BASICFONT_HEIGHT + 1;
         }
@@ -710,7 +772,7 @@ size_t lightDisplay::write(uint8_t c)
         cursorX = 0;
     }
     else if(c != '\r'){
-        if(textWrap && ((BASICFONT_WIDTH + cursorX) > __width)){
+        if(textWrap && ((BASICFONT_WIDTH + cursorX) > width)){
             cursorX = 0;
             cursorY += BASICFONT_HEIGHT + 1;
         }
@@ -737,7 +799,7 @@ void lightDisplay::getTextBounds(const __FlashStringHelper *str, int16_t x,
   *y1 = y;
   *w = *h = 0;
 
-  int16_t minx = __width, miny = __height, maxx = -1, maxy = -1;
+  int16_t minx = 0xFFFF, miny = 0xFFFF, maxx = -1, maxy = -1;
 
   while ((c = pgm_read_byte(s++)))
     charBounds(c, &x, &y, &minx, &miny, &maxx, &maxy);
