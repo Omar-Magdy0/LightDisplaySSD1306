@@ -368,21 +368,27 @@ void lightDisplay::drawQuartCircle(int16_t X0,int16_t Y0,int16_t R,int8_t quart,
         }else 
             d = d + 4 * x + 6; 
         x++;
-        if(quart == 0){
+
+        switch (quart)
+        {
+        case 0:
             drawPixel(X0 - x, Y0 - y, COLOR);
             drawPixel(X0 - y, Y0 - x, COLOR);
-        }
-        if(quart == 1){
+            break;
+        case 1:
             drawPixel(X0 + x, Y0 - y, COLOR);
             drawPixel(X0 + y, Y0 - x, COLOR);
-        }
-        if(quart == 2){
+            break;
+        case 2:
             drawPixel(X0 + y, Y0 + x, COLOR);
             drawPixel(X0 + x, Y0 + y, COLOR);
-        }
-        if(quart == 3){
+            break;
+        case 3:
             drawPixel(X0 - y, Y0 + x, COLOR);
             drawPixel(X0 - x, Y0 + y, COLOR);
+            break;     
+        default:
+            break;
         }
     }
 }
