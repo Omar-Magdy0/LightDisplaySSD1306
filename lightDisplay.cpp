@@ -122,7 +122,11 @@ bool lightDisplay::begin(uint8_t vcc,uint8_t address,bool periphBegin){
     return true;
 }
 /******************************************************************************/
-
+void lightDisplay::setScreenRotation(){
+    sendCommand(0xC0);
+    sendCommand(0xA0);
+};
+/******************************************************************************/
 #ifdef __AVR__
 // Bitmask tables of 0x80>>X and ~(0x80>>X), because X>>Y is slow on AVR
 const uint8_t PROGMEM setBit[] = {0x01, 0x02, 0x04, 0x08,

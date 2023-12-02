@@ -52,7 +52,7 @@ void pageSelect(uint8_t page);
 void pageDisplay();
 void clearPage();
 void wholeScreenClearDisplay();
-
+void setScreenRotation();
 /******************************************************************************/
 // CORE trig and shape drawing functions
 /******************************************************************************/
