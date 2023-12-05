@@ -35,6 +35,8 @@ extern unsigned char *basicFontBitmap;
 #define LIGHTDISPBLACK 0
 #define LIGHTDISPWHITE 1
 #define NUMOFPAGES 8
+#define WHITE 1
+#define BLACK 0
 
 class lightDisplay : public Print{
 private:
@@ -50,7 +52,7 @@ bool begin(uint8_t vcc = SSD1306_SWITCHCAPVCC,uint8_t address = 0x3C,bool periph
 //basic screen functions
 void pageSelect(uint8_t page);
 void pageDisplay();
-void clearPage();
+void clearPage(uint8_t COLOR);
 void wholeScreenClearDisplay();
 void setScreenRotation(uint8_t r = 0);
 /******************************************************************************/
@@ -58,6 +60,7 @@ void setScreenRotation(uint8_t r = 0);
 /******************************************************************************/
 
 void drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR);
+void readAtomicBounds(int16_t COORDX,int16_t COORDY,uint8_t COLOR);
 void bresenhamLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uint8_t COLOR);
 void Hline(int16_t X0,int16_t X1,int16_t Y,uint8_t COLOR);
 void Vline(int16_t Y0,int16_t Y1,int16_t X,uint8_t COLOR);
@@ -143,8 +146,6 @@ uint8_t textColor = LIGHTDISPWHITE;
 bool bufferOptimization = false;
 uint8_t __width__; // THE ACTUAL WIDTH OF THE DISPLAY MODULE (THE BIGGER SIDE)
 uint8_t __height__; // THE ACTUAL HEIGHT OF THE DISPLAY MODULE (THE SMALLER SIDE)
-uint8_t width = __width__; // width after Rotation
-uint8_t height = __height__; // height after ROTATIOn
 uint8_t I2Caddr;
 int8_t currentPage;
 void sendCommand(uint8_t command);

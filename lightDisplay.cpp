@@ -123,50 +123,16 @@ bool lightDisplay::begin(uint8_t vcc,uint8_t address,bool periphBegin){
 }
 /******************************************************************************/
 void lightDisplay::setScreenRotation(uint8_t r){
-    static const uint8_t PROGMEM RC0 [] = {
-                                            SSD1306_MEMORYMODE,
-                                            0x02,
-                                            0xC8,  // COM SCAN Direction command (check datasheet)
-                                            };
-    static const uint8_t PROGMEM RC1 [] = {
-                                            SSD1306_MEMORYMODE,
-                                            0x01,
-                                            0xC0,  // COM SCAN Direction command (check datasheet)
-                                            };
-    static const uint8_t PROGMEM RC2 [] = {
-                                            SSD1306_MEMORYMODE,
-                                            0x01,
-                                            0xC0,  // COM SCAN Direction command (check datasheet)
-                                            };
-    static const uint8_t PROGMEM RC3 [] = {
-                                            SSD1306_MEMORYMODE,
-                                            0x01,
-                                            0xC0,  // COM SCAN Direction command (check datasheet)
-                                            };        
-    switch (r)
-    {
-    case 0 : // THE DEFAULT ROTATION HORIZONTAL
-        sendCommandList(RC0,sizeof(RC0));
-        rotation = 0;
-        width = __width__;
-        height = __height__;
-        break;
-    case 1 :  //90 degree Rotation Vertical
-        sendCommandList(RC1,sizeof(RC1));
-        rotation = 1;
-        width = __height__;
-        height = __width__;
-        break;
-    case 2 : // 180degree ROTATION (HORIZONTAL)
+
+    if (r == 0) { // THE DEFAULT ROTATION HORIZONTAL
+        sendCommand(0xC1); // COM SCAN Direction command (check datasheet)
+        sendCommand(0xA1); // Segment Remap command Check datasheet
+    }
+    else if (r == 180){ // 180degree ROTATION (HORIZONTAL)
         sendCommand(0xC0); // COM SCAN Direction command (check datasheet)
         sendCommand(0xA0); // Segment Remap command Check datasheet
-        break;
-    case 3 :  //270 degree rotation Vertical
-        break;
-    
-    default:
-        break;
     }
+    
 };
 /******************************************************************************/
 #ifdef __AVR__
@@ -181,9 +147,9 @@ const uint8_t PROGMEM clrBit[] = {0xFE, 0xFD, 0xFB, 0xF7,
 
 inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR){
     if((COORDY / 8) != currentPage)return;
-    else if((COORDX >= width)||(COORDY >= height))return;
+    else if((COORDX >= __width__)||(COORDY >= __height__))return;
 
-    if(bufferOptimization){
+    if(this->bufferOptimization){
         if(COORDX < minX)minX = COORDX;
         if(COORDX > maxX)maxX = COORDX;
         if(COORDY/8 < minPage_toEdit)minPage_toEdit = COORDY/8;
@@ -191,40 +157,24 @@ inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR)
         return;
     }
 
-
-    if((COORDY / 8) == this->currentPage){
-        if((rotation % 2) == 0){  // ROTATION MODE 0 and 2
-            uint8_t *ptr = &buffer[COORDX];
+    uint8_t *ptr = &buffer[COORDX];
 #ifdef __AVR__
-            if (COLOR){
-                *ptr |= pgm_read_byte(&setBit[COORDY & 7]);}
-            else
-                *ptr &= pgm_read_byte(&clrBit[COORDY & 7]);
+    if (COLOR)
+        *ptr |= pgm_read_byte(&setBit[COORDY & 7]);
+    else
+        *ptr &= pgm_read_byte(&clrBit[COORDY & 7]);
         
+    
 #else
-            if (COLOR)
-                *ptr |= 1 << (COORDY & 7);
-            else
-                *ptr &= ~(1 << (COORDY & 7));
+    if (COLOR)
+        *ptr |= 1 << (COORDY & 7);
+    else
+        *ptr &= ~(1 << (COORDY & 7));
 #endif
-        }
+        
 
-        if((rotation % 2) == 1){   // ROTATION MODE 1 and 3
-            uint8_t *ptr = &buffer[(COORDX/8) + (COORDY*(width/8))];
-#ifdef __AVR__
-            if (COLOR){
-                *ptr |= pgm_read_byte(&setBit[COORDX & 7]);}
-            else
-                *ptr &= pgm_read_byte(&clrBit[COORDX & 7]);
-        
-#else
-            if (COLOR)
-                *ptr |= 1 << (COORDY & 7);
-            else
-                *ptr &= ~(1 << (COORDY & 7));
-#endif
-        }
-    }
+
+    
 }
 
 /******************************************************************************/
@@ -270,7 +220,7 @@ void lightDisplay::bresenhamLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uin
         if (steep) {
             if(X0/8 == currentPage)break;
         } else {
-            if(Y0/8 == currentPage)break;
+            if((Y0>>3) == currentPage)break;
         }
     }
 
@@ -290,7 +240,7 @@ void lightDisplay::bresenhamLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uin
 /******************************************************************************/
 void lightDisplay::Vline(int16_t Y0,int16_t Y1,int16_t X,uint8_t COLOR){
     if(Y0 > Y1){_Swap_int16(Y0,Y1);}
-    for(;Y0 <= Y1;Y0++){if(Y0/8 == currentPage)break;}
+    for(;Y0 <= Y1;Y0++){if((Y0>>3) == currentPage)break;}
     for(;Y0 <= Y1;Y0++){
         drawPixel(X,Y0,COLOR);
         if(Y0 > (currentPage + 1)*8)return;
@@ -342,9 +292,9 @@ void lightDisplay::pageDisplay(){
     TRANSACTION_END;
 }
 /******************************************************************************/
-void lightDisplay::clearPage(){
+void lightDisplay::clearPage(uint8_t COLOR){
         for(uint8_t j = 0; j < __width__; j++){
-            buffer[j] = 0;   
+            buffer[j] = COLOR*255;   
         }
 }
 
@@ -353,7 +303,7 @@ void lightDisplay::wholeScreenClearDisplay()
 {
     for(uint8_t i = 0; i < NUMOFPAGES; i++){
         pageSelect(i);
-        clearPage();
+        clearPage(SSD1306_BLACK);
         pageDisplay();
         }
 }
@@ -374,13 +324,16 @@ void lightDisplay::drawRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIGHT,u
     Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
     Hline(X0,(X0 + WIDTH - 1),(Y0 + HEIGHT - 1),COLOR);
 }
+extern uint16_t globalTimeMillis;
+uint8_t g = 1;
 /******************************************************************************/
 void lightDisplay::drawFillRect(int16_t X0,int16_t Y0,uint8_t WIDTH,uint8_t HEIGHT,uint8_t COLOR)
 {
-    uint8_t YMAX = Y0 + HEIGHT;
-    for(;Y0 < YMAX;Y0++){if(Y0/8 == currentPage)break;}
-    if(Y0/8 != currentPage)return;
+    const uint8_t YMAX = Y0 + HEIGHT;
+    for(;Y0 < YMAX;Y0++){if((Y0>>3) == currentPage)break;}
+    if((Y0>>3) != currentPage)return;
     for(;Y0 < YMAX;Y0++){
+        if((Y0>>3) != currentPage)return;
         Hline(X0,(X0 + WIDTH - 1),Y0,COLOR);
     }
 }
@@ -522,7 +475,7 @@ void lightDisplay::drawBitMap_V(const unsigned char BITMAP[],int16_t X0,int16_t 
     uint8_t Yrelative = 0;                  // relative Y coordinate where it is the value of Y coordinate of the buffer 
     uint8_t byte;                           // represents the byte we are currently accessing and checking for each bit
     uint8_t bit;
-    if(Y0/8 > currentPage)return;                                           // check if current page has Y0 in it or not
+    if((Y0>>3) > currentPage)return;                                           // check if current page has Y0 in it or not
     for(;Y < (Y0 + HEIGHT - 1);Y++){if ((Y/8) == currentPage)break;}      //always update Y coordinates with ever function call
     if((Y/8) != currentPage)return;                                        //Seem like current page doesnt include the Ymax
                                                                       //Start iterating Y coordinates and X coordinates and access bit and bytes 
@@ -571,13 +524,13 @@ void lightDisplay::drawBitMap_H(const unsigned char BITMAP[],int16_t X0,int16_t 
     uint8_t ymax = Y0 + WIDTH - 1;
 
 
-    if(Y0/8 > currentPage)return;
-    for(;x > 0;x--,Y0++){if(Y0/8 == currentPage)break;}
-    if((Y0/8) != currentPage)return; 
+    if((Y0>>3) > currentPage)return;
+    for(;x > 0;x--,Y0++){if((Y0>>3) == currentPage)break;}
+    if(((Y0>>3)) != currentPage)return; 
 
     for(;x > 0;Y0++,x--){  
         if(Y0 > ymax + 1)return;
-        if(Y0/8 > currentPage)return;
+        if((Y0>>3) > currentPage)return;
         for(int i = 0; i < HEIGHT; i++){
             if(PGM)
                 byte = pgm_read_byte(&BITMAP[x + (i/8)*WIDTH]);
@@ -612,7 +565,6 @@ void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*
 {
     for(;startPage <= endPage; startPage++){    
         this->pageSelect(startPage);
-        this->clearPage();
         function();
         this->pageDisplay();
     }
@@ -664,7 +616,7 @@ void lightDisplay::drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint
 {
     for(;startPage <= endPage; startPage++){    
         this->pageSelect(startPage);
-        this->clearPage();
+        this->clearPage(SSD1306_BLACK);
         function();
         this->atomicDisplay(x,WIDTH);
     }   
@@ -719,7 +671,7 @@ void lightDisplay::charBounds(unsigned char c,int16_t *x,int16_t *y,
         *x = 0;
     }
     else if(c != '\r'){
-        if(textWrap && ((BASICFONT_WIDTH + *x) > width)){
+        if(textWrap && ((BASICFONT_WIDTH + *x) > __width__)){
             *x = 0;
             *y += BASICFONT_HEIGHT + 1;
         }
@@ -772,7 +724,7 @@ size_t lightDisplay::write(uint8_t c)
         cursorX = 0;
     }
     else if(c != '\r'){
-        if(textWrap && ((BASICFONT_WIDTH + cursorX) > width)){
+        if(textWrap && ((BASICFONT_WIDTH + cursorX) > __width__)){
             cursorX = 0;
             cursorY += BASICFONT_HEIGHT + 1;
         }
