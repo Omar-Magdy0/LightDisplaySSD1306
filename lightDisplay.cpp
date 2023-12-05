@@ -146,10 +146,10 @@ const uint8_t PROGMEM clrBit[] = {0xFE, 0xFD, 0xFB, 0xF7,
 /******************************************************************************/
 
 inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR){
-    if((COORDY / 8) != currentPage)return;
-    else if((COORDX >= __width__)||(COORDY >= __height__))return;
-
-    if(this->bufferOptimization){
+    if( ((COORDY / 8) != currentPage) || (COORDX >= __width__) || (COORDY >= __height__))return;
+    uint8_t *ptr = &buffer[COORDX];
+    
+    if(bufferOptimization){
         if(COORDX < minX)minX = COORDX;
         if(COORDX > maxX)maxX = COORDX;
         if(COORDY/8 < minPage_toEdit)minPage_toEdit = COORDY/8;
@@ -157,7 +157,7 @@ inline void lightDisplay::drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR)
         return;
     }
 
-    uint8_t *ptr = &buffer[COORDX];
+
 #ifdef __AVR__
     if (COLOR)
         *ptr |= pgm_read_byte(&setBit[COORDY & 7]);
