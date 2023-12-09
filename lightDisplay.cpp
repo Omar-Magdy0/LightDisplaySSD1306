@@ -561,6 +561,7 @@ void lightDisplay::drawBitMap(const unsigned char BITMAP[],int16_t X0,int16_t Y0
 
 
 /******************************************************************************/
+#ifdef NOLAMBDAFUNCS
 void lightDisplay::displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)())
 {
     for(;startPage <= endPage; startPage++){    
@@ -588,6 +589,17 @@ void lightDisplay::displayFunctionGroupOpt(void(*function)())
     maxPage_toEdit = 0;
 }
 /*******************************************************************************/
+void lightDisplay::drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint8_t endPage,void (*function)())
+{
+    for(;startPage <= endPage; startPage++){    
+        this->pageSelect(startPage);
+        this->clearPage(SSD1306_BLACK);
+        function();
+        this->atomicDisplay(x,WIDTH);
+    }   
+}
+/*******************************************************************************/
+#endif 
 void lightDisplay::atomicDisplay(int8_t x,uint8_t WIDTH){
     TRANSACTION_START;
     sendCommand(x & 0b00001111);                        //SET higher and lower nibble of the column address
@@ -610,16 +622,6 @@ void lightDisplay::atomicDisplay(int8_t x,uint8_t WIDTH){
     }
     wire->endTransmission();
     TRANSACTION_END;
-}
-/*******************************************************************************/
-void lightDisplay::drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint8_t endPage,void (*function)())
-{
-    for(;startPage <= endPage; startPage++){    
-        this->pageSelect(startPage);
-        this->clearPage(SSD1306_BLACK);
-        function();
-        this->atomicDisplay(x,WIDTH);
-    }   
 }
 /*******************************************************************************/
 void lightDisplay::drawChar(int16_t x,int16_t y,unsigned char C,uint8_t COLOR)
@@ -717,23 +719,6 @@ void lightDisplay::getTextBounds(const char *str,int16_t X0,int16_t Y0,
   }
 }
 /*******************************************************************************/
-size_t lightDisplay::write(uint8_t c)
-{
-    if(c == '\n'){
-        cursorY += BASICFONT_HEIGHT + 1;
-        cursorX = 0;
-    }
-    else if(c != '\r'){
-        if(textWrap && ((BASICFONT_WIDTH + cursorX) > __width__)){
-            cursorX = 0;
-            cursorY += BASICFONT_HEIGHT + 1;
-        }
-    drawChar(cursorX,cursorY - BASICFONT_HEIGHT + 1,c,textColor);
-    cursorX += (BASICFONT_WIDTH + 1);
-    }
-    return 1;
- }
-/*******************************************************************************/
 void lightDisplay::getTextBounds(const String &str, int16_t x, int16_t y,
                                  int16_t *x1, int16_t *y1, uint8_t *w,
                                  uint8_t *h) {
@@ -766,5 +751,20 @@ void lightDisplay::getTextBounds(const __FlashStringHelper *str, int16_t x,
   }
 }
 /*******************************************************************************/
-
+size_t lightDisplay::write(uint8_t c)
+{
+    if(c == '\n'){
+        cursorY += BASICFONT_HEIGHT + 1;
+        cursorX = 0;
+    }
+    else if(c != '\r'){
+        if(textWrap && ((BASICFONT_WIDTH + cursorX) > __width__)){
+            cursorX = 0;
+            cursorY += BASICFONT_HEIGHT + 1;
+        }
+    drawChar(cursorX,cursorY - BASICFONT_HEIGHT + 1,c,textColor);
+    cursorX += (BASICFONT_WIDTH + 1);
+    }
+    return 1;
+ }
 

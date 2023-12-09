@@ -60,7 +60,6 @@ void setScreenRotation(uint8_t r = 0);
 /******************************************************************************/
 
 void drawPixel(int16_t COORDX,int16_t COORDY,uint8_t COLOR);
-void readAtomicBounds(int16_t COORDX,int16_t COORDY,uint8_t COLOR);
 void bresenhamLine(int16_t X0,int16_t Y0,int16_t X1,int16_t Y1,uint8_t COLOR);
 void Hline(int16_t X0,int16_t X1,int16_t Y,uint8_t COLOR);
 void Vline(int16_t Y0,int16_t Y1,int16_t X,uint8_t COLOR);
@@ -78,11 +77,56 @@ void drawFillCircle(int16_t X0,int16_t Y0,uint8_t R,uint8_t COLOR);
 /******************************************************************************/
 // Displaying and SENDING BUFFER PART
 /******************************************************************************/
+// NO LAMBDAFUNCS DISABLES THE LAMBDAFUNCTIONS SUPPORT FEATURE
+//#define NOLAMBDAFUNCS
+#ifndef NOLAMBDAFUNCS
+template <typename Lambda>
+void displayFunctionGroup(uint8_t startPage,uint8_t endPage,Lambda function){
+      for(;startPage <= endPage; startPage++){    
+        this->pageSelect(startPage);
+        function();
+        this->pageDisplay();
+    }
+};
 
+template <typename Lambda>
+void displayFunctionGroupOpt(Lambda function)
+{
+    bufferOptimization = true;
+    if(bufferOptimization){
+        for(int i = 0;i < NUMOFPAGES;i++){  
+            this->pageSelect(i); 
+            function();
+        }
+    }
+    bufferOptimization = false;
+    drawAtomicArea(minX,(maxX - minX + 1),minPage_toEdit,maxPage_toEdit,function);
+
+    minX = 255;
+    maxX = 0;
+    minPage_toEdit = 255;
+    maxPage_toEdit = 0;
+};
+
+template <typename Lambda>
+void drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint8_t endPage,Lambda function)
+{
+    for(;startPage <= endPage; startPage++){    
+        this->pageSelect(startPage);
+        this->clearPage(SSD1306_BLACK);
+        function();
+        this->atomicDisplay(x,WIDTH);
+    }   
+}
+
+
+#else
 void displayFunctionGroup(uint8_t startPage,uint8_t endPage,void(*function)());
 void displayFunctionGroupOpt(void(*function)());
-void atomicDisplay(int8_t x,uint8_t WIDTH);
 void drawAtomicArea(uint8_t x,uint8_t WIDTH,uint8_t startPage,uint8_t endPage,void (*function)());
+#endif
+
+void atomicDisplay(int8_t x,uint8_t WIDTH);
 
 /******************************************************************************/
 // DISPLAYING TEXT FUNCTIONS PART
